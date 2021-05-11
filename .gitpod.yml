@@ -1,0 +1,13 @@
+image:
+  file: Dockerfile
+
+tasks:
+  - name: Compile JavaScript
+    command: make deps
+    command: make generate-dev
+  - name: Docker
+    command: docker compose up
+  - name: Fleet serve
+    command: make
+    command: build/fleet preparedb --dev
+    commnd: build/fleet serve --dev
