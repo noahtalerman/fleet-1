@@ -1,70 +1,51 @@
 # API versioning
 
-## Why do we need to version the API?
+Currently, all Fleet API routes include `v1` in their URL path. 
 
-The API is a product, just like fleetctl and the web UI. It has its users, mostly fleetctl and the web UI, but third-party developers also work with it.
+In the next major version release (5.0.0), Fleet will no longer support `v1`. Instead, all API routes will
+support specifying a date (ex. `2022-07`) or `latest` in he place of `v1`. 
 
-An evolving product inherently needs versioning. Most products create a new version with any addition to the product, but 
-the API will work differently in that regard, as new additions to the API won't increase the version.
+In minor version releases following 5.0.0, Fleet may introduce breaking changes to the API. Each release
+that includes breaking changes will introduce a new dated version.
 
-Fleet will use new versions for breaking changes and deprecating APIs. We 
-release a new version of the API only when a breaking change is introduced.
+When a new dated version is introduced, the previous dated version is supported for the next 6 months.
 
-## What kind of versioning will we use for the API?
+## Why introduce dated versioning?
 
-The format for the API version we've chosen is that of a date with the following format:
+The Fleet API is part of the Fleet product. Like the Fleet UI and fleetctl CLI, we'd like to design the best API.
 
-```
-<year>-<month>
-```
+Dated versioning allows for more iteration on the Fleet API while providing users with ample time to
+adjust integrations.
 
-The date is chosen based on the month the breaking change was introduced.
+## Why include `latest`?
 
-## Why is v1 still available at the time of this writing?
+???
 
-`v1` is the first version of the API. It existed before this text, so it doesn't follow the versioning schema 
-explained here. We still need to support it for a few months (see below on deprecation). So it'll be treated as an 
-exception in the logic in the Go code while it exists.
-
-## Why not semantic versioning?
-
-Semantic versioning is great and we are using it in Fleet itself. However, it doesn't necessarily work for APIs since we 
-will not be releasing a new version with every addition, just with breaking changes. So it doesn't align with our 
-needs at the API level.
-
-## How are API releases aligned with regular Fleet releases?
-
-New versions are deployed when Fleet is released, given the nature of the product. However, not all new versions of 
-Fleet will have a new release for the API.
-
-## How long do I have until you remove a deprecated API?
-
-6 months after the new release has been available.
-
-## How are breaking changes introduced? (Mostly for developers)
+## How are breaking changes introduced?
 
 Let's use an example. In `handler.go` we have the following endpoint:
 
 ```go
-e := NewUserAuthenticatedEndpointer(svc, opts, r, "v1", "2021-11")
+e := NewUserAuthenticatedEndpointer(svc, opts, r, "latest", "2021-11")
 
 // other endpoints here
 
 e.GET("/api/latest/fleet/carves/{id:[0-9]+}/block/{block_id}", getCarveBlockEndpoint, getCarveBlockRequest{})
 ```
 
-The versions available are `v1` and `2021-11`. This means that the following are valid API paths:
+The versions available are `latest` and `2021-11`. This means that the following are valid API paths:
 
 ```
 /api/latest/fleet/carves/1/block/1234
 /api/2021-11/fleet/carves/1/block/1234
 ```
 
-Now let's say we want to introduce a breaking change to this API, so we have to specify the version this particular API 
-is being supported and then add the new one that will only be available starting in the new version:
+Now let's say we want to introduce a breaking change. We then specify the version this particular
+API is being supported and then add the new one that will only be available starting in the new
+version:
 
 ```go
-e := NewUserAuthenticatedEndpointer(svc, opts, r, "v1", "2021-11", "2021-12")
+e := NewUserAuthenticatedEndpointer(svc, opts, r, "2021-11", "2021-12")
 
 // other endpoints here
 
@@ -80,10 +61,9 @@ This will mean that the following are all valid paths:
 /api/2021-12/fleet/carves/1/block/1234
 ```
 
-However, `/api/2021-11/fleet/carves/1/block/1234` will be the old API format, and `/api/2021-12/fleet/carves/1/block/1234` 
-will be the new API format.
+`/api/2021-12/fleet/carves/1/block/1234` is the new dated version and `/api/2021-11/fleet/carves/1/block/1234` is the previous dated version.
 
-After the date `2022-03`, version `2021-11` (and `v1` in this case) will be removed:
+After 6 months, version `2021-11` will be removed:
 
 
 ```go
@@ -94,9 +74,10 @@ e := NewUserAuthenticatedEndpointer(svc, opts, r, "2021-12")
 e.GET("/api/latest/fleet/carves/{id:[0-9]+}/block/{block_id}", getCarveBlockEndpoint, getCarveBlockRequest{})
 ```
 
-This will mean that the following are the only valid paths after this point:
+This means that the following are the only valid paths after this point:
 
 ```
+/api/latest/fleet/carves/1/block/1234
 /api/2021-12/fleet/carves/1/block/1234
 ```
 
